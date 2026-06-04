@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Golf Tournament Scoreboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #1a6b3c;
+    --green-light: #e8f5ee;
+    --green-mid: #2d9b5a;
+    --blue: #1a4fa0;
+    --blue-light: #e8eef8;
+    --red: #b83232;
+    --red-light: #faeaea;
+    --amber: #c47d0e;
+    --amber-light: #fef3dc;
+    --gray: #6b7280;
+    --gray-light: #f3f4f6;
+    --border: #e5e7eb;
+    --text: #111827;
+    --text-muted: #6b7280;
+    --bg: #f8f9fa;
+    --card: #ffffff;
+    --leprev: #1a4fa0;
+    --leprev-light: #e8eef8;
+    --pm: #7c2d8e;
+    --pm-light: #f5edf8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header {
+    background: var(--green);
+    color: white;
+    padding: 1.25rem 1rem 1rem;
+    text-align: center;
+  }
+  header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+  header p { font-size: 12px; opacity: 0.75; margin-top: 3px; }
+
+  .sync-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 1rem;
+    background: white;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .sync-bar-left { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #9ca3af; flex-shrink: 0; }
+  .dot.ok { background: #16a34a; }
+  .dot.err { background: #dc2626; }
+  .dot.syncing { background: #d97706; }
+  .refresh-btn {
+    background: none; border: none; cursor: pointer;
+    font-size: 18px; color: var(--text-muted); padding: 2px 6px;
+    border-radius: 6px;
+  }
+  .refresh-btn:active { background: var(--gray-light); }
+
+  .main { padding: 1rem; max-width: 520px; margin: 0 auto; }
+
+  .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+  .score-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+  }
+  .score-card.leading { border: 2px solid var(--green-mid); }
+  .score-card .team-name { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .score-card .pts { font-size: 32px; font-weight: 600; font-family: 'DM Mono', monospace; line-height: 1; }
+  .score-card .pts-label { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+  .team-leprev { color: var(--leprev); }
+  .team-pm { color: var(--pm); }
+
+  .round-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--text-muted);
+    margin: 1.25rem 0 8px;
+  }
+
+  .match-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+  }
+
+  .mc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .mc-title { font-size: 14px; font-weight: 600; }
+  .badge {
+    font-size: 10px; font-weight: 600; padding: 3px 8px;
+    border-radius: 99px; letter-spacing: 0.03em;
+  }
+  .badge-pending { background: var(--gray-light); color: var(--gray); }
+  .badge-live { background: #dcfce7; color: #15803d; }
+  .badge-final { background: var(--green-light); color: var(--green); }
+
+  .match-status {
+    text-align: center;
+    font-size: 14px; font-weight: 500;
+    padding: 8px 12px;
+    background: var(--gray-light);
+    border-radius: 8px;
+    margin-bottom: 10px;
+  }
+  .match-status.live { background: #dcfce7; color: #15803d; }
+  .match-status.final-leprev { background: var(--leprev-light); color: var(--leprev); }
+  .match-status.final-pm { background: var(--pm-light); color: var(--pm); }
+  .match-status.final-tie { background: var(--amber-light); color: var(--amber); }
+
+  .hole-section { margin-bottom: 10px; }
+  .hole-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .hole-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .hole-dots { display: flex; flex-wrap: wrap; gap: 3px; }
+  .hdot {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--border);
+  }
+  .hdot.leprev { background: var(--leprev); }
+  .hdot.pm { background: var(--pm); }
+  .hdot.half { background: var(--green-mid); }
+
+  .hole-btns { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; margin-bottom: 10px; }
+  .hbtn {
+    padding: 10px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--gray-light);
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.1s;
+  }
+  .hbtn:active { transform: scale(0.97); }
+  .hbtn.active-leprev { background: var(--leprev-light); border-color: var(--leprev); color: var(--leprev); font-weight: 600; }
+  .hbtn.active-pm { background: var(--pm-light); border-color: var(--pm); color: var(--pm); font-weight: 600; }
+  .hbtn.active-half { background: #dcfce7; border-color: var(--green-mid); color: var(--green); font-weight: 600; }
+
+  .bonus-section { border-top: 1px solid var(--border); padding-top: 10px; }
+  .bonus-title { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 7px; }
+  .bonus-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .bonus-col-name { font-size: 11px; font-weight: 600; margin-bottom: 5px; }
+  .bonus-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .bchip {
+    font-size: 11px; padding: 4px 10px; border-radius: 99px;
+    border: 1px solid var(--border);
+    background: var(--gray-light);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    transition: all 0.1s;
+  }
+  .bchip:active { transform: scale(0.95); }
+  .bchip.on-birdie { background: var(--blue-light); border-color: var(--blue); color: var(--blue); }
+  .bchip.on-eagle { background: var(--amber-light); border-color: var(--amber); color: var(--amber); }
+
+  .pts-preview {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px;
+  }
+  .pts-preview-item {
+    text-align: center; font-size: 12px;
+    padding: 5px; background: var(--gray-light);
+    border-radius: 8px; color: var(--text-muted);
+  }
+  .pts-preview-item span { font-weight: 600; color: var(--text); }
+
+  .finalize-row { margin-top: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+  .fin-btn {
+    width: 100%; padding: 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--gray-light);
+    color: var(--text-muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px; font-weight: 500;
+    cursor: pointer;
+  }
+  .fin-btn.ready {
+    background: var(--green-light);
+    border-color: var(--green-mid);
+    color: var(--green);
+    font-weight: 600;
+  }
+  .fin-btn:active { transform: scale(0.98); }
+
+  .footer { text-align: center; padding: 2rem 1rem 3rem; font-size: 11px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⛳ Golf Tournament</h1>
+  <p>Team Leprev vs Team PM &middot; 2v2 Scramble &middot; Match Play</p>
+</header>
+
+<div class="sync-bar">
+  <div class="sync-bar-left">
+    <span class="dot" id="sync-dot"></span>
+    <span id="sync-label">Connecting...</span>
+  </div>
+  <button class="refresh-btn" onclick="loadData()" aria-label="Refresh">↻</button>
+</div>
+
+<div class="main">
+  <div class="score-grid" id="totals"></div>
+  <div id="matches-container"></div>
+  <div class="footer">Updates every 30 seconds &middot; Tap ↻ to refresh now</div>
+</div>
+
+<script>
+const GS_URL = 'https://script.google.com/macros/s/AKfycbyfDNA-EdTrVmXgQsy1rjNtepe3_m8h7j7e0Y9E60DEeWneevDvKqG6ZIpAfXpFMJA/exec';
+const PTS = { win: 10, tie: 5, birdie: 3, eagle: 5 };
+
+let state = {
+  matches: Array.from({ length: 6 }, (_, i) => ({
+    id: i,
+    round: Math.floor(i / 3) + 1,
+    inRound: (i % 3) + 1,
+    holes: Array(18).fill(null),
+    birdies: { A: 0, B: 0 },
+    eagles: { A: 0, B: 0 },
+    finalized: false
+  }))
+};
+
+function setSyncStatus(s) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  dot.className = 'dot ' + s;
+  lbl.textContent = s === 'ok' ? 'Live' : s === 'err' ? 'Sync error — tap ↻' : 'Syncing...';
+}
+
+async function loadData() {
+  setSyncStatus('syncing');
+  try {
+    const r = await fetch(GS_URL + '?t=' + Date.now());
+    const raw = await r.json();
+    if (raw && raw.length > 1) parseSheet(raw);
+    setSyncStatus('ok');
+  } catch (e) {
+    setSyncStatus('err');
+  }
+  render();
+}
+
+function parseSheet(rows) {
+  rows.slice(1).forEach(row => {
+    const id = parseInt(row[0]);
+    if (isNaN(id) || id < 0 || id > 5) return;
+    const m = state.matches[id];
+    for (let h = 0; h < 18; h++) {
+      const v = row[2 + h];
+      m.holes[h] = (v === '' || v === null || v === undefined) ? null : String(v);
+    }
+    m.birdies.A = parseInt(row[20]) || 0;
+    m.birdies.B = parseInt(row[21]) || 0;
+    m.eagles.A = parseInt(row[22]) || 0;
+    m.eagles.B = parseInt(row[23]) || 0;
+    m.finalized = row[24] === '1' || row[24] === 1 || row[24] === 'true' || row[24] === true;
+  });
+}
+
+async function saveMatch(m) {
+  setSyncStatus('syncing');
+  const holesData = m.holes.map(h => h === null ? '' : h);
+  const rowData = [m.id, '', ...holesData, m.birdies.A, m.birdies.B, m.eagles.A, m.eagles.B, m.finalized ? '1' : '0'];
+  try {
+    await fetch(GS_URL, {
+      method: 'POST',
+      body: JSON.stringify({ row: m.id + 2, data: rowData })
+    });
+    setSyncStatus('ok');
+  } catch (e) {
+    setSyncStatus('err');
+  }
+}
+
+function holesPlayed(m) { return m.holes.filter(h => h !== null).length; }
+
+function holeBalance(m) {
+  let up = 0;
+  m.holes.forEach(h => { if (h === 'A') up++; else if (h === 'B') up--; });
+  return up;
+}
+
+function matchStatus(m) {
+  const played = holesPlayed(m);
+  if (played === 0 && !m.finalized) return { text: 'Not started', cls: '', type: 'pending', winner: null };
+  const up = holeBalance(m);
+  const remaining = 18 - played;
+  if (m.finalized || played === 18 || Math.abs(up) > remaining) {
+    if (up > 0) return { text: 'Leprev wins', cls: 'final-leprev', type: 'final', winner: 'A' };
+    if (up < 0) return { text: 'PM wins', cls: 'final-pm', type: 'final', winner: 'B' };
+    return { text: 'Tied', cls: 'final-tie', type: 'final', winner: 'tie' };
+  }
+  if (up === 0) return { text: 'All square · thru ' + played, cls: 'live', type: 'live', winner: null };
+  const leader = up > 0 ? 'Leprev' : 'PM';
+  return { text: leader + ' up ' + Math.abs(up) + ' · thru ' + played, cls: 'live', type: 'live', winner: null };
+}
+
+function calcPts(m, team) {
+  const st = matchStatus(m);
+  let pts = 0;
+  if (st.type === 'final') {
+    if (st.winner === 'tie') pts += PTS.tie;
+    else if (st.winner === 'A' && team === 'A') pts += PTS.win;
+    else if (st.winner === 'B' && team === 'B') pts += PTS.win;
+  }
+  pts += m.birdies[team] * PTS.birdie;
+  pts += m.eagles[team] * PTS.eagle;
+  return pts;
+}
+
+function teamTotals() {
+  return state.matches.reduce((acc, m) => {
+    acc.A += calcPts(m, 'A');
+    acc.B += calcPts(m, 'B');
+    return acc;
+  }, { A: 0, B: 0 });
+}
+
+function setHole(matchId, holeIdx, val) {
+  const m = state.matches[matchId];
+  if (m.finalized) return;
+  m.holes[holeIdx] = m.holes[holeIdx] === val ? null : val;
+  saveMatch(m); render();
+}
+
+function toggleBonus(matchId, team, type) {
+  const m = state.matches[matchId];
+  const cur = m[type + 's'][team];
+  m[type + 's'][team] = cur >= 5 ? 0 : cur + 1;
+  saveMatch(m); render();
+}
+
+function finalizeMatch(matchId) {
+  const m = state.matches[matchId];
+  if (!m.finalized && !confirm('Finalize this match and lock in the points?')) return;
+  m.finalized = !m.finalized;
+  saveMatch(m); render();
+}
+
+function render() {
+  const tots = teamTotals();
+  const aWin = tots.A > tots.B, bWin = tots.B > tots.A;
+
+  document.getElementById('totals').innerHTML = `
+    <div class="score-card ${aWin ? 'leading' : ''}">
+      <div class="team-name team-leprev">Team Leprev</div>
+      <div class="pts">${tots.A}</div>
+      <div class="pts-label">${aWin ? '🏆 Leading' : 'points'}</div>
+    </div>
+    <div class="score-card ${bWin ? 'leading' : ''}">
+      <div class="team-name team-pm">Team PM</div>
+      <div class="pts">${tots.B}</div>
+      <div class="pts-label">${bWin ? '🏆 Leading' : 'points'}</div>
+    </div>`;
+
+  let html = '';
+  for (let r = 1; r <= 2; r++) {
+    html += `<div class="round-label">Round ${r}</div>`;
+    state.matches.filter(m => m.round === r).forEach(m => {
+      const played = holesPlayed(m);
+      const st = matchStatus(m);
+      const nextHole = Math.min(played, 17);
+      const isFinal = st.type === 'final';
+      const ptsA = calcPts(m, 'A'), ptsB = calcPts(m, 'B');
+
+      const badgeCls = m.finalized ? 'badge-final' : st.type === 'live' ? 'badge-live' : 'badge-pending';
+      const badgeText = m.finalized ? 'Final' : st.type === 'live' ? 'Live' : 'Pending';
+
+      html += `<div class="match-card">
+        <div class="mc-header">
+          <span class="mc-title">Match ${m.inRound}</span>
+          <span class="badge ${badgeCls}">${badgeText}</span>
+        </div>
+        <div class="match-status ${st.cls}">${st.text}</div>`;
+
+      if (!m.finalized) {
+        if (played > 0) {
+          html += `<div class="hole-section">
+            <div class="hole-header">
+              <span class="hole-label">Holes played</span>
+            </div>
+            <div class="hole-dots">`;
+          for (let h = 0; h < 18; h++) {
+            const v = m.holes[h];
+            const cls = v === 'A' ? 'leprev' : v === 'B' ? 'pm' : v === 'half' ? 'half' : '';
+            html += `<div class="hdot ${cls}" title="Hole ${h + 1}${v ? ': ' + (v === 'A' ? 'Leprev' : v === 'B' ? 'PM' : 'Halved') : ''}"></div>`;
+          }
+          html += `</div></div>`;
+        }
+
+        html += `<div class="hole-label" style="margin-bottom:6px;font-size:12px;color:#6b7280">Hole ${nextHole + 1} result</div>
+          <div class="hole-btns">
+            <button class="hbtn ${m.holes[nextHole] === 'A' ? 'active-leprev' : ''}" onclick="setHole(${m.id},${nextHole},'A')">Leprev</button>
+            <button class="hbtn ${m.holes[nextHole] === 'half' ? 'active-half' : ''}" onclick="setHole(${m.id},${nextHole},'half')" style="padding:10px 4px;font-size:12px">Halved</button>
+            <button class="hbtn ${m.holes[nextHole] === 'B' ? 'active-pm' : ''}" onclick="setHole(${m.id},${nextHole},'B')">PM</button>
+          </div>`;
+      }
+
+      html += `<div class="bonus-section">
+        <div class="bonus-title">Bonus points this match</div>
+        <div class="bonus-cols">
+          <div>
+            <div class="bonus-col-name team-leprev">Leprev</div>
+            <div class="bonus-chips">
+              <span class="bchip ${m.birdies.A > 0 ? 'on-birdie' : ''}" onclick="toggleBonus(${m.id},'A','birdie')">Birdie${m.birdies.A > 0 ? ' ×' + m.birdies.A : ''}</span>
+              <span class="bchip ${m.eagles.A > 0 ? 'on-eagle' : ''}" onclick="toggleBonus(${m.id},'A','eagle')">Eagle${m.eagles.A > 0 ? ' ×' + m.eagles.A : ''}</span>
+            </div>
+          </div>
+          <div>
+            <div class="bonus-col-name team-pm">PM</div>
+            <div class="bonus-chips">
+              <span class="bchip ${m.birdies.B > 0 ? 'on-birdie' : ''}" onclick="toggleBonus(${m.id},'B','birdie')">Birdie${m.birdies.B > 0 ? ' ×' + m.birdies.B : ''}</span>
+              <span class="bchip ${m.eagles.B > 0 ? 'on-eagle' : ''}" onclick="toggleBonus(${m.id},'B','eagle')">Eagle${m.eagles.B > 0 ? ' ×' + m.eagles.B : ''}</span>
+            </div>
+          </div>
+        </div>
+        <div class="pts-preview">
+          <div class="pts-preview-item">Leprev <span>+${ptsA} pts</span></div>
+          <div class="pts-preview-item">PM <span>+${ptsB} pts</span></div>
+        </div>
+      </div>`;
+
+      if (played === 18 || isFinal || m.finalized) {
+        html += `<div class="finalize-row">
+          <button class="fin-btn ${!m.finalized ? 'ready' : ''}" onclick="finalizeMatch(${m.id})">
+            ${m.finalized ? 'Unfinalize match' : 'Finalize &amp; lock in points'}
+          </button>
+        </div>`;
+      }
+
+      html += `</div>`;
+    });
+  }
+  document.getElementById('matches-container').innerHTML = html;
+}
+
+loadData();
+setInterval(loadData, 30000);
+</script>
+</body>
+</html>
