@@ -107,6 +107,8 @@
   .fin-btn { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--gray-light); color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; }
   .fin-btn.ready { background: var(--green-light); border-color: var(--green-mid); color: var(--green); font-weight: 600; }
   .fin-btn:active { transform: scale(0.98); }
+  .undo-btn { width: 100%; padding: 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--gray-light); color: var(--text-muted); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; margin-bottom: 8px; }
+  .undo-btn:active { transform: scale(0.98); background: #fef3dc; border-color: var(--amber); color: var(--amber); }
 
   .footer { text-align: center; padding: 2rem 1rem 3rem; font-size: 11px; color: var(--text-muted); }
 </style>
@@ -257,7 +259,16 @@ function setHole(matchId, holeIdx, val) {
 function toggleBonus(matchId, team, type) {
   const m = state.matches[matchId];
   const cur = m[type + 's'][team];
-  m[type + 's'][team] = cur >= 5 ? 0 : cur + 1;
+  m[type + 's'][team] = cur >= 15 ? 0 : cur + 1;
+  saveMatch(m); render();
+}
+
+function undoLastHole(matchId) {
+  const m = state.matches[matchId];
+  if (m.finalized) return;
+  for (let h = 17; h >= 0; h--) {
+    if (m.holes[h] !== null) { m.holes[h] = null; break; }
+  }
   saveMatch(m); render();
 }
 
@@ -315,7 +326,7 @@ function render() {
 
   let html = '';
   for (let r = 1; r <= 2; r++) {
-    html += `<div class="round-label">Round ${r}</div>`;
+    html += `<div class="round-label">Day ${r}</div>`;
     state.matches.filter(m => m.round === r).forEach(m => {
       const played = holesPlayed(m);
       const st = matchStatus(m);
@@ -361,7 +372,8 @@ function render() {
             <button class="hbtn ${m.holes[nextHole]==='A'?'active-leprev':''}" onclick="setHole(${m.id},${nextHole},'A')">Leprev</button>
             <button class="hbtn ${m.holes[nextHole]==='half'?'active-half':''}" onclick="setHole(${m.id},${nextHole},'half')" style="font-size:12px;padding:10px 4px">Halved</button>
             <button class="hbtn ${m.holes[nextHole]==='B'?'active-pm':''}" onclick="setHole(${m.id},${nextHole},'B')">PM</button>
-          </div>`;
+          </div>
+          ${played > 0 ? `<button class="undo-btn" onclick="undoLastHole(${m.id})">↩ Undo hole ${played}</button>` : ''}`;
       }
 
       html += `<div class="bonus-section">
